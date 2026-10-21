@@ -4,6 +4,7 @@ from logging.config import fileConfig
 from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
+from sqlalchemy.engine import make_url
 
 from app.models import Base
 
@@ -18,7 +19,14 @@ if config.config_file_name is not None:
 url = os.environ.get('DATABASE_URL')
 if not url:
     raise RuntimeError('DATABASE_URL environment variable is not set')
-config.set_main_option('sqlalchemy.url', url)
+
+database_url = make_url(url)
+if database_url.drivername in ('postgres', 'postgresql'):
+    database_url = database_url.set(drivername='postgresql+psycopg')
+config.set_main_option(
+    'sqlalchemy.url',
+    database_url.render_as_string(hide_password=False).replace('%', '%%'),
+)
 
 target_metadata = Base.metadata
 
